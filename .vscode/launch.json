@@ -1,0 +1,30 @@
+{
+    "configurations": [
+        {
+            "name": "bt_soc_thermometer_mock_silabs_debug:default_config",
+            "cwd": "${workspaceFolder}",
+            "type": "cortex-debug",
+            "request": "launch",
+            "serverpath": "/Users/mah/.silabs/slt/installs/archive/exx32-v6.0.32/JLinkGDBServerCLExe",
+            "servertype": "jlink",
+            "gdbPath": "/Users/mah/.silabs/slt/installs/archive/exx32-v6.0.32/arm-none-eabi-gdb",
+            "device": "EFR32MG22CxxxF512",
+            "svdFile": "/var/folders/n0/7n4k3ql90hj1m24dhxp_zvg00000gn/T/silabs_extension/silabs_extension/svd/BGM220PC22HNA.svd",
+            "runToEntryPoint": "main",
+            "rtos": "FreeRTOS",
+            "showDevDebugOutput": "raw",
+            "executable": "/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/base/bt_soc_thermometer_mock.out",
+            "preLaunchTask": "bt_soc_thermometer_mock_silabs_debug:default_config_combined",
+            "serialNumber": "440199682",
+            "overrideLaunchCommands": [
+                "exec-file /Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/base/bt_soc_thermometer_mock.out",
+                "symbol-file /Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/base/bt_soc_thermometer_mock.out"
+            ],
+            "overrideResetCommands": [
+                "monitor reset",
+                "set $pc = __Vectors[1]",
+                "set $sp = __Vectors[0]"
+            ]
+        }
+    ]
+}

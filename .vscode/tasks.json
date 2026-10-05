@@ -1,0 +1,47 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "bt_soc_thermometer_mock_silabs_debug:default_config_setup",
+            "type": "shell",
+            "command": "/Users/mah/.silabs/slt/installs/conan/p/cmake0491e58cd027f/p/CMake.app/Contents/bin/cmake --preset project",
+            "options": {
+                "cwd": "/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc"
+            }
+        },
+        {
+            "label": "bt_soc_thermometer_mock_silabs_debug:default_config_build",
+            "type": "shell",
+            "command": "/Users/mah/.silabs/slt/installs/conan/p/cmake0491e58cd027f/p/CMake.app/Contents/bin/cmake --build --preset default_config",
+            "options": {
+                "cwd": "/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc"
+            }
+        },
+        {
+            "label": "bt_soc_thermometer_mock_silabs_debug:default_config_flash",
+            "type": "shell",
+            "command": "/Users/mah/.silabs/slt/installs/archive/Commander.app/Contents/MacOS/commander",
+            "args": [
+                "flash",
+                "/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/base/bt_soc_thermometer_mock.hex",
+                "--halt",
+                "--serialno",
+                "440199682",
+                "--device",
+                "BGM220PC22HNA"
+            ]
+        },
+        {
+            "label": "bt_soc_thermometer_mock_silabs_debug:default_config_combined",
+            "dependsOrder": "sequence",
+            "presentation": {
+                "reveal": "never"
+            },
+            "dependsOn": [
+                "bt_soc_thermometer_mock_silabs_debug:default_config_setup",
+                "bt_soc_thermometer_mock_silabs_debug:default_config_build",
+                "bt_soc_thermometer_mock_silabs_debug:default_config_flash"
+            ]
+        }
+    ]
+}

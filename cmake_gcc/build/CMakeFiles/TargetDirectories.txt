@@ -1,0 +1,4 @@
+/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/CMakeFiles/slc.dir
+/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/CMakeFiles/bt_soc_thermometer_mock.dir
+/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/CMakeFiles/edit_cache.dir
+/Users/mah/SimplicityStudio/v6_workspace/bt_soc_thermometer_mock/cmake_gcc/build/CMakeFiles/rebuild_cache.dir
