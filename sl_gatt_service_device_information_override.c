@@ -34,6 +34,10 @@
 #include "gatt_db.h"
 #include "app_assert.h"
 #include "sl_gatt_service_device_information_override.h"
+#include "app.h"
+
+// Report the application version as firmware revision.
+#define FIRMWARE_REVISION_STRING APP_VERSION
 
 // -----------------------------------------------------------------------------
 // Set default values for the characteristics if not provided externally.

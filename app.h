@@ -31,6 +31,9 @@
 #ifndef APP_H
 #define APP_H
 
+// Application version, printed at boot and reported as firmware revision.
+#define APP_VERSION "v4"
+
 #include <stdbool.h>
 
 /**************************************************************************//**

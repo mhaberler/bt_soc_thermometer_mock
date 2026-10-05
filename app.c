@@ -43,9 +43,6 @@
 #include "sl_main_init.h"
 #include "app.h"
 
-// Application version, printed at boot.
-#define APP_VERSION "v2"
-
 // Connection handle.
 static uint8_t app_connection = 0;
 

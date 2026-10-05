@@ -2,7 +2,7 @@
 
 How over-the-air firmware update (OTA DFU) was added to `bt_soc_thermometer_mock`, and how to build, flash and update.
 
-**Status:** app and bootloader build, GBL is generated. The update itself has not yet been run on hardware.
+**Status:** update v1 to v2 with Simplicity Connect passed on hardware. The own app (see [Own app](#own-app)) builds for Android and iOS but has not yet been run on a phone.
 
 ## Plan
 
@@ -16,7 +16,7 @@ Goal: update the application over BLE from a phone, as a development exercise.
 | Project changes | Edit `.slcp`, regenerate with `slc` CLI | Reproducible; no hand edits in `autogen/` |
 | Bootloader | SDK `bootloader-apploader` project, generated as sibling project | Same SDK version as the app |
 | Flashing | Done manually with Simplicity Commander | |
-| Proof of update | Version string in boot log on VCOM | One-line change, no GATT cache issues |
+| Proof of update | Version string in boot log on VCOM, and from v3 on as firmware revision (`2A26`) | Readable from the phone without a serial cable |
 
 How in-place OTA works: the phone writes to the OTA control characteristic, the app reboots into the Apploader (part of the bootloader), which advertises as `OTA`, receives the GBL image, overwrites the application and reboots into it. The device has no working application while the transfer runs.
 
@@ -50,7 +50,7 @@ The first 4 bytes of RAM (`0x20000000`) are reserved for the bootloader reset re
    - Component `in_place_ota_dfu` added. It pulls in `apploader`, `apploader_util` and `bootloader_interface`, adds the OTA GATT service, and registers its own event handler.
    - `post_build` entry pointing to `bt_soc_thermometer_mock.slpb`.
 2. `bt_soc_thermometer_mock.slpb` (new): copy of SDK `bluetooth_le_app/postbuild_profile/bt_dfu_app_s2.slpb`. Converts the build output to `.s37` and creates the `.gbl`.
-3. `app.c`: `APP_VERSION` define and one boot log line, `App version: vN`.
+3. `app.h`: `APP_VERSION` define. `app.c` prints it at boot (`App version: vN`), and `sl_gatt_service_device_information_override.c` reports it as Device Information firmware revision (`2A26`, at most 8 characters).
 4. Regenerated files (do not edit by hand): `autogen/linkerfile.ld`, `autogen/gatt_db.[ch]`, `autogen/sl_bluetooth.c`, `autogen/sl_event_handler.c`, `autogen/sl_component_catalog.h`, `cmake_gcc/bt_soc_thermometer_mock.cmake`, new config headers `config/sl_bt_in_place_ota_dfu_config.h`, `config/btl_interface_cfg.h`, `config/app_properties_config.h`, `config/btconf/in_place_ota_dfu.xml`, and copied SDK sources under `simplicity_sdk_2026.6.0/`.
 5. Sibling project `../bt-bootloader-apploader/` (outside this git repository).
 6. `.gitignore`: `cmake_gcc/build/`, `untracked/`, `artifact/`.
@@ -129,9 +129,45 @@ Expected on VCOM: `App version: v2`.
 
 ### 6. Making a new version later
 
-1. Change `APP_VERSION` in `app.c` (and whatever else).
+1. Change `APP_VERSION` in `app.h` (and whatever else).
 2. Build (step 3).
 3. Send `cmake_gcc/build/base/bt_soc_thermometer_mock.gbl` with Simplicity Connect (step 5).
+
+## Own app
+
+`../thermometer-ota-app/` is a Capacitor app (Vue 3, TypeScript, `@capacitor-community/bluetooth-le`) that scans for the thermometer, shows temperature and firmware version, downloads a GBL from a URL and runs the update.
+
+Images for testing it: `artifact/bt_soc_thermometer_mock_v3.gbl` and `_v4.gbl`. Both report their version in `2A26`; v2 and older report the Bluetooth stack version there instead.
+
+1. Bring the device to v3 once, with Simplicity Connect (step 5) and `bt_soc_thermometer_mock_v3.gbl`.
+2. Serve the images from the Mac:
+
+   ```sh
+   cd $WS/bt_soc_thermometer_mock/artifact
+   python3 -m http.server 8000
+   ```
+
+3. Build and install the app:
+
+   ```sh
+   cd $WS/thermometer-ota-app
+   bun install
+   bun run build-prod
+   bun run sync
+   bun run run-on-galaxy-s24     # or run-on-i16
+   ```
+
+4. In the app: Scan, tap the thermometer. Temperature and `Firmware: v3` appear.
+5. Enter `http://<mac-ip>:8000/bt_soc_thermometer_mock_v4.gbl`, tap Download, then Update device. Phone and Mac must be on the same network.
+6. After the upload the app reconnects and shows `Firmware: v4 (was v3)`.
+
+What the app does during the update: writes `0x00` to OTA control (`F7BF3564-FB6D-4E53-88A4-5E37E0326063`), waits for the device to reappear as Apploader, connects, writes `0x00` to OTA control, writes the GBL in chunks to OTA data (`984227F3-34FC-4045-A5D0-2C581F81A153`) with response, writes `0x03` to OTA control and disconnects.
+
+A device stuck in Apploader mode shows up in the scan list marked "update mode" and can be updated directly.
+
+The app allows plain HTTP on both platforms (`usesCleartextTraffic` on Android, `NSAllowsArbitraryLoads` on iOS). That is for development only.
+
+Unit tests for the parts that need no phone: `bun run test`.
 
 ## Troubleshooting
 
