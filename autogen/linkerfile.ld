@@ -29,11 +29,12 @@
 
  MEMORY
  {
-   FLASH      (rx)  : ORIGIN = 0x0, LENGTH = 0x7e000
-   RAM        (rwx) : ORIGIN = 0x20000000, LENGTH = 0x8000
+   FLASH      (rx)  : ORIGIN = 0x12000, LENGTH = 0x6c000
+   RAM        (rwx) : ORIGIN = 0x20000004, LENGTH = 0x7ffc
+   BOOTLOADER_RESET_REGION (rwx) : ORIGIN = 0x20000000, LENGTH = 0x4
    /* Dummy region is used for the dummy segment, which in turn never gets data
     * loaded, but is only used to calculate the size of objects placed in it. */
-   DUMMY      (!ax) : ORIGIN = 0xfff82000, LENGTH = 0x7e000
+   DUMMY      (!ax) : ORIGIN = 0xfff94000, LENGTH = 0x6c000
  }
 
 /*******************************************************************************
@@ -92,6 +93,7 @@ PHDRS
   ram_code PT_LOAD FLAGS(5);      /* RAMfuncs need to be RX */
   ram_data PT_LOAD FLAGS(6);      /* Relocatable RAM data needs own segment */
   ram_post_data PT_LOAD FLAGS(6); /* All RAM content after data is RW */
+  btl_data PT_LOAD FLAGS(6);      /* Bootloader data is in a separate region */
 
   dummy_seg PT_NULL FLAGS(4);     /* Dummy segment for dummy sections */
 }
@@ -109,6 +111,13 @@ SECTIONS
     __Vectors_End = .;
     __Vectors_Size = __Vectors_End - __Vectors;
   } > FLASH :vectors
+  .bootloader_reset_section (NOLOAD):
+  {
+    __ResetReasonStart__ = .;
+    . = . + 4;
+    . = ALIGN(4);
+    __ResetReasonEnd__ = .;
+  } > BOOTLOADER_RESET_REGION :btl_data
 
   .stack (NOLOAD):
   {
@@ -286,8 +295,8 @@ heap_size = heap_limit - __HeapBase;
     __HeapLimit = ORIGIN(RAM) + LENGTH(RAM);
   } > RAM :ram_post_data
 
-  __ram_end__ = 0x20000000 + 0x8000;
-  __main_flash_end__ = 0x0 + 0x7e000;
+  __ram_end__ = 0x20000004 + 0x7ffc;
+  __main_flash_end__ = 0x12000 + 0x6c000;
 
    /* This is where we handle flash storage blocks. We use dummy sections for finding the configured
    * block sizes and then "place" them at the end of flash when the size is known. */
@@ -312,5 +321,7 @@ heap_size = heap_limit - __HeapBase;
   ASSERT((linker_storage_begin >= (__etext + SIZEOF(.data))), "FLASH memory overflowed !")
 
 
+  HIDDEN(app_flash_end = 0x12000 + 0x6c000);
+  ASSERT( (linker_nvm_begin + SIZEOF(.nvm)) <= app_flash_end, "NVM3 is excessing the flash size !")
 
 }

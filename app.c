@@ -43,6 +43,9 @@
 #include "sl_main_init.h"
 #include "app.h"
 
+// Application version, printed at boot.
+#define APP_VERSION "v2"
+
 // Connection handle.
 static uint8_t app_connection = 0;
 
@@ -111,6 +114,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
                    evt->data.evt_system_boot.minor,
                    evt->data.evt_system_boot.patch,
                    evt->data.evt_system_boot.hash);
+      app_log_info("App version: %s" APP_LOG_NL, APP_VERSION);
 
       // Extract unique ID from BT Address.
       sc = sl_bt_gap_get_identity_address(&address, &address_type);

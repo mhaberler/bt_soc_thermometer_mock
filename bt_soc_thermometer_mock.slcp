@@ -95,6 +95,9 @@ component:
   id: health_thermometer
 - package: simplicity_sdk
   vendor: silabs
+  id: in_place_ota_dfu
+- package: simplicity_sdk
+  vendor: silabs
   id: mpu
 - package: simplicity_sdk
   vendor: silabs
@@ -676,6 +679,8 @@ configuration:
   - psa_crypto
   name: SL_PSA_KEY_USER_SLOT_COUNT
   value: '0'
+post_build:
+- path: bt_soc_thermometer_mock.slpb
 ui_hints:
   highlight:
   - path: config/btconf/gatt_configuration.btconf

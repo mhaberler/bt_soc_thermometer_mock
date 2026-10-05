@@ -1,8 +1,11 @@
 #CRC Codes for initially generated config files -- do not modify!
 app_assert_config.h=2088525855
 app_log_config.h=2056933365
+app_properties_config.h=-1164457435
 btconf/gatt_configuration.btconf=1906708987
 btconf/health_thermometer.xml=-1616790830
+btconf/in_place_ota_dfu.xml=-1005570782
+btl_interface_cfg.h=1211535926
 nvm3_default_config.h=2103899018
 psa_crypto_config.h=-561758290
 sl_bgapi_config.h=1469720325
@@ -11,6 +14,7 @@ sl_bluetooth_common_config.h=-939840894
 sl_bluetooth_config.h=1702251631
 sl_bluetooth_connection_config.h=-1036090200
 sl_board_control_config.h=1597221579
+sl_bt_in_place_ota_dfu_config.h=1108413306
 sl_btctrl_config.h=-772972406
 sl_btctrl_scheduler_priority_config.h=375337081
 sl_cli_config.h=1525932711
