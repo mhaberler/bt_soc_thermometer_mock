@@ -2,7 +2,7 @@
 
 How over-the-air firmware update (OTA DFU) was added to `bt_soc_thermometer_mock`, and how to build, flash and update.
 
-**Status:** update v1 to v2 with Simplicity Connect passed on hardware. The own app (see [Own app](#own-app)) builds for Android and iOS but has not yet been run on a phone.
+**Status:** verified on hardware, both with Simplicity Connect (v1 to v2) and with the own app on Android and iOS (see [Own app](#own-app)).
 
 ## Plan
 

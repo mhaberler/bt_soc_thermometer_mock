@@ -1,8 +1,44 @@
 # SoC - Thermometer
 
-This example implements the Health Thermometer service. It enables a peer device to connect and receive temperature values via Bluetooth. The reported values are measured by a temperature sensor located on the mainboard.
+This project implements the Health Thermometer service. It enables a peer device to connect and receive temperature values via Bluetooth. It is the Silicon Labs "Bluetooth - SoC Thermometer (Mock)" example for the BGM220PC22HNA module (BRD4314A, Simplicity SDK 2026.6.0), extended with firmware update over Bluetooth and automated releases. The board has no temperature sensor; the reported value is generated and changes by 1 degree Celsius every second.
 
-> Note: This example does not include Device Firmware Update (DFU) functionality by default. For details see the [Device Firmware Update](#device-firmware-update) section.
+## Status
+
+| Part | State |
+|------|-------|
+| Thermometer application | Works |
+| Firmware update over Bluetooth (in-place OTA DFU, Apploader bootloader) | Works; verified on hardware with the Simplicity Connect app |
+| Release build on GitHub | Works; every `vX.Y.Z` tag publishes a release |
+| Own phone app | Works; update from a release verified on hardware with Android and iOS |
+| Image signing, secure boot, access control for updates | Not done. Any connected client can start an update. Development use only |
+
+Details of the update setup, flash layout, bootloader and manual procedures are in [OTA.md](OTA.md).
+
+## Releases and CI build
+
+Released firmware is at <https://github.com/mhaberler/bt_soc_thermometer_mock/releases>. Each release carries
+
+- `bt_soc_thermometer_mock.gbl`, the image for an update over Bluetooth,
+- `bt_soc_thermometer_mock.s37`, the image for flashing by cable (needs the bootloader, see [OTA.md](OTA.md)).
+
+A release is made by pushing a tag:
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow [.github/workflows/release.yml](.github/workflows/release.yml) builds the firmware on a GitHub runner and publishes both files. The tag sets the firmware version: `v1.2.3` yields firmware that reports `1.2.3` in the Firmware Revision characteristic (`2A26`) and in the boot log. Tags must have the form `vMAJOR.MINOR.PATCH`. Started by hand ("Run workflow"), the workflow only builds, as version `0.0.0`, and keeps the images as a workflow artifact.
+
+The runner needs no Simplicity Studio. The SDK sources used by the project are part of this repository, the compiler is the Arm GNU toolchain 14.2, and Simplicity Commander, which creates the GBL file, is fetched from the Silicon Labs update site.
+
+Local builds report version `0.0.0`. How to build locally is described in [OTA.md](OTA.md).
+
+## Phone app
+
+[thermometer-ota-app](https://github.com/mhaberler/thermometer-ota-app) is a companion app for Android and iOS. It scans for the thermometer, shows temperature and firmware version, looks up the latest release of this repository, and offers an update when the release is newer than the firmware on the device. It can also load a GBL file from any URL.
+
+The Simplicity Connect app from Silicon Labs works as well, both for reading the temperature and for updates.
 
 ## Getting Started
 
@@ -19,7 +55,7 @@ The following picture shows the system view of how it works.
 
 Follow these steps to get the temperature value on your smartphone.
 
-1. Create the soc-thermometer project based on your hardware, then build and flash the image to your board. Alternatively, you could flash the pre-built demo image.
+1. Flash the bootloader and the application to your board, see [OTA.md](OTA.md). The picture shows the stock example in Simplicity Studio.
 
 ![step 1](image/readme_img2.png)
 
@@ -33,7 +69,7 @@ Follow these steps to get the temperature value on your smartphone.
 
 ![step 4](image/readme_img4.png)
 
-5. Four characteristics will show up. Find the *Temperature Measurement* and press the `indicate` button. Then, you will see the temperature value getting updated periodically. You should also see the temperature displayed change as you press the top of the sensor with your finger, as shown below. If your board is not connected to a temperature sensor (e.g., because of a limited number of available pins), a generated value will be shown which changes 1 degree Celsius every second.
+5. Four characteristics will show up. Find the *Temperature Measurement* and press the `indicate` button. Then, you will see the temperature value getting updated periodically. You should also see the temperature displayed change as you press the top of the sensor with your finger, as shown below. On this board a generated value is shown which changes 1 degree Celsius every second.
 
 ![step 5](image/readme_img5.png)
 
@@ -47,8 +83,9 @@ Alternatively, you can follow the steps below instead of steps 3-5 to use the He
 
 ## Device Firmware Update
 
-This example project does not include Device Firmware Update (DFU) functionality by default, but it can be added easily.
-SoC applications can use one of Silicon Labs' Over-the-Air (OTA) DFU implementations. The table below summarizes the options:
+This project uses the In-place OTA DFU component together with the Bluetooth Apploader OTA DFU bootloader. A GBL file is created by a post-build step. See [OTA.md](OTA.md) for how it was set up and how to use it.
+
+For reference, Silicon Labs offers two Over-the-Air (OTA) DFU implementations for SoC applications:
 
 |                           | In-place OTA DFU                 | Application OTA DFU                 |
 |---------------------------|----------------------------------|-------------------------------------|
@@ -56,12 +93,6 @@ SoC applications can use one of Silicon Labs' Over-the-Air (OTA) DFU implementat
 | **Compatible bootloader** | Bluetooth Apploader OTA DFU      | Bootloader - SoC Internal Storage (Series 2) <br> Bootloader - SoC Storage (Series 3) |
 | **Reference solution**    | Bluetooth - SoC In-Place OTA DFU | Bluetooth - SoC Application OTA DFU |
 | **Supported devices**     | Supports Series 2 devices only and requires a smaller flash size | Supports Series 2 and Series 3 devices with enough flash to store firmware images in 2 instances |
-
-To add DFU to an existing project:
-- Add the appropriate DFU component to your project using Simplicity Studio’s Software Component browser.
-- Add a post-build step to generate the GBL (Gecko Bootloader) file using Simplicity Studio’s Post Build Editor.
-- Rebuild the project.
-- Flash a compatible bootloader to the device.
 
 For more information on bootloaders, see [UG103.6: Bootloader Fundamentals](https://www.silabs.com/documents/public/user-guides/ug103-06-fundamentals-bootloading.pdf) and [UG489: Silicon Labs Gecko Bootloader User's Guide for GSDK 4.0 and Higher](https://www.silabs.com/documents/public/user-guides/ug489-gecko-bootloader-user-guide-gsdk-4.pdf).
 
