@@ -1,3 +1,10 @@
 cmake_gcc/build/
 untracked/
 artifact/
+
+# Machine-local IDE and tool state
+.codex/
+.projectlinkstore
+.silabsExtContext
+.vscode/
+vscode.conf

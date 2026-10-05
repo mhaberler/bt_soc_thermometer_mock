@@ -1,0 +1,76 @@
+name: Release firmware
+
+# A tag vX.Y.Z builds the firmware as version X.Y.Z and publishes it as a release.
+# A manual run only builds.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  ARM_GCC_URL: https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-x86_64-arm-none-eabi.tar.xz
+  COMMANDER_URL: https://updates.silabs.com/studio/v6/updates/update_site/archives/commander/1.25.0/Commander_linux_x86_64_1v25p0b1995.tar.bz
+  COMMANDER_SHA256: 956ae8e9e1600e492e1c4e57d271941ebf83bde6bfe23530a4e09ea300fdea32
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            # The firmware revision characteristic holds at most 8 characters.
+            if ! echo "$GITHUB_REF_NAME" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$' || [ ${#GITHUB_REF_NAME} -gt 9 ]; then
+              echo "::error::tag must be vMAJOR.MINOR.PATCH with a version of at most 8 characters"
+              exit 1
+            fi
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build
+          mkdir -p "$RUNNER_TEMP/gcc" "$RUNNER_TEMP/silabs"
+          curl -fsSL "$ARM_GCC_URL" | tar -xJ --strip-components=1 -C "$RUNNER_TEMP/gcc"
+          curl -fsSL -o "$RUNNER_TEMP/commander.tar.bz" "$COMMANDER_URL"
+          echo "$COMMANDER_SHA256  $RUNNER_TEMP/commander.tar.bz" | sha256sum -c -
+          tar -xjf "$RUNNER_TEMP/commander.tar.bz" -C "$RUNNER_TEMP/silabs"
+          # Overrides read by cmake_gcc/toolchain.cmake
+          echo "ARM_GCC_DIR=$RUNNER_TEMP/gcc" >> "$GITHUB_ENV"
+          echo "POST_BUILD_EXE=$RUNNER_TEMP/silabs/commander/commander" >> "$GITHUB_ENV"
+          echo "NINJA_EXE_PATH=$(command -v ninja)" >> "$GITHUB_ENV"
+
+      - name: Build
+        working-directory: cmake_gcc
+        env:
+          # Commander is a Qt application; no display on the runner.
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          export CFLAGS="-DAPP_VERSION=\\\"$VERSION\\\""
+          cmake --preset project
+          cmake --build --preset default_config
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ env.VERSION }}
+          if-no-files-found: error
+          path: |
+            cmake_gcc/build/base/bt_soc_thermometer_mock.gbl
+            cmake_gcc/build/base/bt_soc_thermometer_mock.s37
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
+            cmake_gcc/build/base/bt_soc_thermometer_mock.gbl \
+            cmake_gcc/build/base/bt_soc_thermometer_mock.s37

@@ -32,7 +32,10 @@
 #define APP_H
 
 // Application version, printed at boot and reported as firmware revision.
-#define APP_VERSION "v4"
+// Release builds set it from the git tag.
+#ifndef APP_VERSION
+#define APP_VERSION "0.0.0"
+#endif
 
 #include <stdbool.h>
 

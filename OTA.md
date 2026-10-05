@@ -50,7 +50,7 @@ The first 4 bytes of RAM (`0x20000000`) are reserved for the bootloader reset re
    - Component `in_place_ota_dfu` added. It pulls in `apploader`, `apploader_util` and `bootloader_interface`, adds the OTA GATT service, and registers its own event handler.
    - `post_build` entry pointing to `bt_soc_thermometer_mock.slpb`.
 2. `bt_soc_thermometer_mock.slpb` (new): copy of SDK `bluetooth_le_app/postbuild_profile/bt_dfu_app_s2.slpb`. Converts the build output to `.s37` and creates the `.gbl`.
-3. `app.h`: `APP_VERSION` define. `app.c` prints it at boot (`App version: vN`), and `sl_gatt_service_device_information_override.c` reports it as Device Information firmware revision (`2A26`, at most 8 characters).
+3. `app.h`: `APP_VERSION` define (default `0.0.0`, release builds set it from the git tag). `app.c` prints it at boot (`App version: vN`), and `sl_gatt_service_device_information_override.c` reports it as Device Information firmware revision (`2A26`, at most 8 characters).
 4. Regenerated files (do not edit by hand): `autogen/linkerfile.ld`, `autogen/gatt_db.[ch]`, `autogen/sl_bluetooth.c`, `autogen/sl_event_handler.c`, `autogen/sl_component_catalog.h`, `cmake_gcc/bt_soc_thermometer_mock.cmake`, new config headers `config/sl_bt_in_place_ota_dfu_config.h`, `config/btl_interface_cfg.h`, `config/app_properties_config.h`, `config/btconf/in_place_ota_dfu.xml`, and copied SDK sources under `simplicity_sdk_2026.6.0/`.
 5. Sibling project `../bt-bootloader-apploader/` (outside this git repository).
 6. `.gitignore`: `cmake_gcc/build/`, `untracked/`, `artifact/`.
@@ -129,13 +129,29 @@ Expected on VCOM: `App version: v2`.
 
 ### 6. Making a new version later
 
-1. Change `APP_VERSION` in `app.h` (and whatever else).
-2. Build (step 3).
-3. Send `cmake_gcc/build/base/bt_soc_thermometer_mock.gbl` with Simplicity Connect (step 5).
+Released versions come from git tags, see [Releases](#releases). For a local test image:
+
+1. Build (step 3). Local builds report version `0.0.0`; to set another one, configure with `CFLAGS='-DAPP_VERSION=\"1.2.3\"'` in a fresh build directory.
+2. Send `cmake_gcc/build/base/bt_soc_thermometer_mock.gbl` with Simplicity Connect (step 5) or the own app.
+
+## Releases
+
+The firmware is published at <https://github.com/mhaberler/bt_soc_thermometer_mock/releases>.
+
+```sh
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+The workflow `.github/workflows/release.yml` then builds the firmware with version `1.2.3` (reported in `2A26`) and creates a release with `bt_soc_thermometer_mock.gbl` (OTA) and `bt_soc_thermometer_mock.s37` (cable flash, needs the bootloader).
+
+- The tag must be `vMAJOR.MINOR.PATCH`, version at most 8 characters.
+- Running the workflow by hand ("Run workflow" on GitHub) only builds, as version `0.0.0`, and keeps the images as workflow artifact.
+- The runner needs no Simplicity Studio: the SDK sources are in the repository, the compiler comes from Arm, Simplicity Commander (for the GBL) from the Silicon Labs update site.
 
 ## Own app
 
-`../thermometer-ota-app/` is a Capacitor app (Vue 3, TypeScript, `@capacitor-community/bluetooth-le`) that scans for the thermometer, shows temperature and firmware version, downloads a GBL from a URL and runs the update.
+`../thermometer-ota-app/` is a Capacitor app (Vue 3, TypeScript, `@capacitor-community/bluetooth-le`) that scans for the thermometer, shows temperature and firmware version, and runs the update. On connect it looks up the latest release of this repository and offers it if it is newer than the firmware on the device; a GBL can also be loaded from any URL.
 
 Images for testing it: `artifact/bt_soc_thermometer_mock_v3.gbl` and `_v4.gbl`. Both report their version in `2A26`; v2 and older report the Bluetooth stack version there instead.
 
