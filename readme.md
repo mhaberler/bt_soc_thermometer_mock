@@ -7,7 +7,7 @@ This project implements the Health Thermometer service. It enables a peer device
 | Part | State |
 |------|-------|
 | Thermometer application | Works |
-| Temperature and firmware version in the advertisement (BTHome v2) | New in 1.1.0; not yet confirmed on hardware |
+| Temperature and firmware version in the advertisement (BTHome v2) | Works since 1.1.0; verified on hardware with a BTHome decoder and the phone app |
 | Firmware update over Bluetooth (in-place OTA DFU, Apploader bootloader) | Works; verified on hardware with the Simplicity Connect app |
 | Release build on GitHub | Works; every `vX.Y.Z` tag publishes a release |
 | Own phone app | Works; update from a release verified on hardware with Android and iOS |
