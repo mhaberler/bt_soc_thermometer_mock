@@ -7,12 +7,24 @@ This project implements the Health Thermometer service. It enables a peer device
 | Part | State |
 |------|-------|
 | Thermometer application | Works |
+| Temperature and firmware version in the advertisement (BTHome v2) | New in 1.1.0; not yet confirmed on hardware |
 | Firmware update over Bluetooth (in-place OTA DFU, Apploader bootloader) | Works; verified on hardware with the Simplicity Connect app |
 | Release build on GitHub | Works; every `vX.Y.Z` tag publishes a release |
 | Own phone app | Works; update from a release verified on hardware with Android and iOS |
 | Image signing, secure boot, access control for updates | Not done. Any connected client can start an update. Development use only |
 
 Details of the update setup, flash layout, bootloader and manual procedures are in [OTA.md](OTA.md).
+
+## Advertising
+
+While no client is connected, the device advertises every 100 ms and can be connected to. The advertisement carries temperature and firmware version in [BTHome v2](https://bthome.io/format/) format, so BTHome receivers can read them without connecting. The temperature is measured anew every second.
+
+| Packet | Content |
+|--------|---------|
+| Advertising data | Flags, service UUID `1809` (Health Thermometer), service data `FCD2` (BTHome v2, not encrypted): temperature (object `0x02`) and firmware version (object `0xF2`) |
+| Scan response | Device name `Thermometer Example` |
+
+Receivers that scan passively do not get the scan response and therefore no name. While a client is connected the device does not advertise. The data is built in [bthome.h](bthome.h).
 
 ## Releases and CI build
 

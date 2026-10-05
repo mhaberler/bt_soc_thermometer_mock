@@ -42,6 +42,8 @@
 #include "sl_health_thermometer.h"
 #include "sl_main_init.h"
 #include "app.h"
+#include "gatt_db.h"
+#include "bthome.h"
 
 // Connection handle.
 static uint8_t app_connection = 0;
@@ -57,6 +59,27 @@ static app_timer_t app_periodic_timer;
 
 // Periodic timer callback.
 static void app_periodic_timer_cb(app_timer_t *timer, void *data);
+
+// Interval of temperature updates in the advertising data.
+#define APP_ADV_UPDATE_INTERVAL_MS 1000
+
+// Timer for updating the advertising data while not connected.
+static app_timer_t app_adv_timer;
+
+// Firmware version in the advertising data: major, minor, patch.
+static uint8_t app_version[3];
+
+// Set the device name as scan response.
+static void app_set_scan_response(void);
+
+// Measure temperature and put it into the advertising data.
+static void app_update_adv_data(void);
+
+// Advertising data update timer callback.
+static void app_adv_timer_cb(app_timer_t *timer, void *data);
+
+// Start periodic updates of the advertising data.
+static void app_start_adv_updates(void);
 
 // Application Init.
 void app_init(void)
@@ -130,10 +153,11 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
       sc = sl_bt_advertiser_create_set(&advertising_set_handle);
       app_assert_status(sc);
 
-      // Generate data for advertising
-      sc = sl_bt_legacy_advertiser_generate_data(advertising_set_handle,
-                                                 sl_bt_advertiser_general_discoverable);
-      app_assert_status(sc);
+      // Advertise temperature and firmware version in BTHome format,
+      // device name in the scan response.
+      bthome_parse_version(APP_VERSION, app_version);
+      app_set_scan_response();
+      app_update_adv_data();
 
       // Set advertising interval to 100ms.
       sc = sl_bt_advertiser_set_timing(
@@ -148,6 +172,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
       sc = sl_bt_legacy_advertiser_start(advertising_set_handle,
                                          sl_bt_legacy_advertiser_connectable);
       app_assert_status(sc);
+      app_start_adv_updates();
 
       app_log_info("Started advertising" APP_LOG_NL);
       break;
@@ -156,6 +181,9 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
     // This event indicates that a new connection was opened.
     case sl_bt_evt_connection_opened_id:
       app_log_info("Connection opened" APP_LOG_NL);
+
+      // Advertising has stopped.
+      (void)app_timer_stop(&app_adv_timer);
 
 #ifdef SL_CATALOG_BLUETOOTH_FEATURE_POWER_CONTROL_PRESENT
       // Set remote connection power reporting - needed for Power Control
@@ -176,6 +204,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
       sc = sl_bt_legacy_advertiser_start(advertising_set_handle,
                                          sl_bt_legacy_advertiser_connectable);
       app_assert_status(sc);
+      app_start_adv_updates();
       app_log_info("Started advertising" APP_LOG_NL);
       break;
 
@@ -302,6 +331,76 @@ static void app_periodic_timer_cb(app_timer_t *timer, void *data)
   if (sc) {
     app_log_warning("Failed to send temperature measurement indication [0x%04lx]" APP_LOG_NL, sc);
   }
+}
+
+static void app_set_scan_response(void)
+{
+  sl_status_t sc;
+  // AD structure: length, type (complete local name), name
+  uint8_t scan_response[2 + gattdb_device_name_len];
+  size_t name_len = 0;
+
+  sc = sl_bt_gatt_server_read_attribute_value(gattdb_device_name,
+                                              0,
+                                              gattdb_device_name_len,
+                                              &name_len,
+                                              &scan_response[2]);
+  app_assert_status(sc);
+  scan_response[0] = (uint8_t)(name_len + 1);
+  scan_response[1] = 0x09;
+
+  sc = sl_bt_legacy_advertiser_set_data(advertising_set_handle,
+                                        sl_bt_advertiser_scan_response_packet,
+                                        name_len + 2,
+                                        scan_response);
+  app_assert_status(sc);
+}
+
+static void app_update_adv_data(void)
+{
+  sl_status_t sc;
+  int32_t temperature = 0;
+  uint32_t humidity = 0;
+  uint8_t adv_data[BTHOME_ADV_LEN];
+  size_t adv_len;
+
+  // Measure temperature; units are % and milli-Celsius.
+  sc = sl_sensor_rht_get(&humidity, &temperature);
+  if (sc != SL_STATUS_OK) {
+    app_log_warning("Invalid RHT reading: %lu %ld" APP_LOG_NL, humidity, temperature);
+  }
+
+  // button 0 pressed: overwrite temperature with -20C.
+  if (app_btn0_pressed) {
+    temperature = -20 * 1000;
+  }
+
+  adv_len = bthome_build_adv(temperature, app_version, adv_data);
+  sc = sl_bt_legacy_advertiser_set_data(advertising_set_handle,
+                                        sl_bt_advertiser_advertising_data_packet,
+                                        adv_len,
+                                        adv_data);
+  if (sc != SL_STATUS_OK) {
+    app_log_warning("Failed to set advertising data [0x%04lx]" APP_LOG_NL, sc);
+  }
+}
+
+static void app_adv_timer_cb(app_timer_t *timer, void *data)
+{
+  (void)data;
+  (void)timer;
+  app_update_adv_data();
+}
+
+static void app_start_adv_updates(void)
+{
+  sl_status_t sc;
+  sc = app_timer_start(&app_adv_timer,
+                       APP_ADV_UPDATE_INTERVAL_MS,
+                       app_adv_timer_cb,
+                       NULL,
+                       true);
+  app_assert_status(sc);
 }
 
 #ifdef SL_CATALOG_CLI_PRESENT
